@@ -1,0 +1,26 @@
+﻿<UserControl x:Class="BiliClient.UI.UserControl_av"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:BiliClient.UI"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="465" d:DesignWidth="850">
+    <Grid Name="grid" Background="#FFE5E5E5" Height="465"  Width="850" Loaded="Grid_Loaded" MouseDown="grid_MouseDown">
+        <Button x:Name="button_close" Content="X" HorizontalAlignment="Left" Height="32" Margin="822,0,0,0" VerticalAlignment="Top" Width="32" mah:ControlsHelper.ContentCharacterCasing="Upper" Background="White" Click="button_close_Click" MouseEnter="button_close_MouseEnter" MouseLeave="button_close_MouseLeave"/>
+        <Button x:Name="button_dl" Content="DL Flv" HorizontalAlignment="Left" Height="53" Margin="659,384,0,0" VerticalAlignment="Top" Width="165" Click="button_dl_Click"/>
+        <Button x:Name="button_dl_mp4" Content="DL MP4" HorizontalAlignment="Left" Height="53" Margin="659,307,0,0" VerticalAlignment="Top" Width="165" Click="button2_dl_Click"/>
+        <Label x:Name="label_title" Content="Title" HorizontalAlignment="Left" Height="40" Margin="26,10,0,0" VerticalAlignment="Top" Width="684" FontSize="21.333"/>
+        <Label x:Name="label_auth" Content="上传者：" HorizontalAlignment="Left" Height="36" Margin="43,50,0,0" VerticalAlignment="Top" Width="285"/>
+        <ScrollViewer Name="sv" Width="320" Margin="43,91,487,111">
+            <TextBlock x:Name="textBlock" TextWrapping="Wrap"/>
+        </ScrollViewer>
+        <Image x:Name="act_like" HorizontalAlignment="Left" Height="36" Margin="710,0,0,0" VerticalAlignment="Top" Width="36" Source="/BiliClient;component/Resources/like_gray.png" MouseDown="act_like_MouseDown"/>
+        <Image x:Name="act_coin" HorizontalAlignment="Left" Height="36" Margin="746,0,0,0" VerticalAlignment="Top" Width="36" Source="/BiliClient;component/Resources/coins_gray.png" MouseDown="act_coin_MouseDown"/>
+        <Image x:Name="act_favo" HorizontalAlignment="Left" Height="36" Margin="782,0,0,0" VerticalAlignment="Top" Width="36" Source="/BiliClient;component/Resources/favo_gray.png" MouseDown="act_favo_MouseDown"/>
+        <ScrollViewer Name="fav_folder" HorizontalAlignment="Left" Height="141" Margin="709,36,0,0" VerticalAlignment="Top" Width="109">
+            <StackPanel Name="fav_panel" Orientation="Vertical" Background="White"/>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
