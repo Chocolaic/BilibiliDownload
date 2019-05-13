@@ -1,4 +1,4 @@
-# BilibiliDL
+# BilibiliDL(版权归Bilibili
 渣到不行的WPF
 
 改进(是重做
