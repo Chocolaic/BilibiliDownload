@@ -16,15 +16,7 @@ namespace BiliClient.Utils
 
         internal static string getValue(string Str)
         {
-            byte[] keyArray = Encoding.UTF8.GetBytes(Key);
-            byte[] toEncryptArray = Convert.FromBase64String(Str);
-            RijndaelManaged rDel = new RijndaelManaged();
-            rDel.Key = keyArray;
-            rDel.Mode = CipherMode.ECB;
-            rDel.Padding = PaddingMode.PKCS7;
-            ICryptoTransform cTransform = rDel.CreateDecryptor();
-            byte[] resultArray = cTransform.TransformFinalBlock(toEncryptArray, 0, toEncryptArray.Length);
-            return Encoding.UTF8.GetString(resultArray);
+			return "EXAMPLE VERSION";
         }
     }
 }
