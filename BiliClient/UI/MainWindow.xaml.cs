@@ -14,11 +14,11 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using MahApps.Metro.Controls;
 
-using BiliClient.UI;
 using MahApps.Metro.Controls.Dialogs;
 using BiliClient.Utils.Session;
+using BiliClient.UI.Element;
 
-namespace BiliClient
+namespace BiliClient.UI
 {
     /// <summary>
     /// MainWindow.xaml 的交互逻辑
@@ -27,7 +27,9 @@ namespace BiliClient
     {
         UserControl_search ui_search;
         UserControl_download ui_dl;
-        UserControl_setting ui_setting;
+
+        SettingFlyout tab_setting;
+        AccountFlyout tab_account;
         public MainWindow()
         {
             InitializeComponent();
@@ -35,29 +37,39 @@ namespace BiliClient
 
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            Interact.InteractHandler.UIhandle = this;
+            InteractHandler.UIhandle = this;
             ui_search = new UserControl_search();
             ui_dl = new UserControl_download();
-            ui_setting = new UserControl_setting();
-            ui_search.addTabItem += createTab;
             tabItem_main.Content=ui_search;
             tabItem_download.Content = ui_dl;
-            tabItem_setting.Content = ui_setting;
-            accountBoard.Visibility = Visibility.Hidden;
-            
+            InitFlyouts();         
+            this.Dispatcher.BeginInvoke(new Action(delegate
+            {
+                Reader.Init();
+                SessionCache.LoadUserInfo();
+            }));
+
+        }
+        private void InitFlyouts()
+        {
+            tab_setting = new SettingFlyout();
+            flyoutsControl.Items.Add(tab_setting);
         }
 
         private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            e.Cancel = true;
-            closeCheck();
+            if (ui_dl.dlList.Count > 0)
+            {
+                e.Cancel = true;
+                Msg("等一下", "你还有未完成的下载，是否退出?", close);
+            }
         }
         private void tabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
         }
 
-        private void createTab(Utils.Net.API.VideoInfo info)
+        public void createTab(Utils.Net.API.VideoInfo info)
         {
             TabItem item = new TabItem();
             string title = info.title.Replace(" ", "");
@@ -68,10 +80,16 @@ namespace BiliClient
             tabControl.Items.Add(item);
             tabControl.SelectedItem = item;
         }
-        private void setLogin(Utils.Net.API.AccountInfo info)
+        public void setLogin(Utils.Net.API.AccountInfo info)
         {
+            tab_account = new AccountFlyout { Header = info.data.name };
             btn_login.Content = info.data.name;
-            account_img.Source = new BitmapImage(new Uri(info.data.face));
+            flyoutsControl.Items.Add(tab_account);
+            tab_account.image.Source = new BitmapImage(new Uri(info.data.face));
+        }
+        public FlyoutsControl getFlyoutsControl()
+        {
+            return flyoutsControl;
         }
 
         private void removeTab(TabItem item=null)
@@ -87,44 +105,36 @@ namespace BiliClient
             if (Utils.Session.SessionToken.Logined != true)
             {
                 Window_login log = new Window_login();
-                log.setLogin += setLogin;
                 log.Show();
             }
             else
             {
-                if (accountBoard.Visibility == Visibility.Hidden)
+                if (tab_account.IsOpen == false)
                 {
-                    account_level.Content = string.Format("等级：{0}\r\n硬币：{1}", SessionToken.info.data.level, SessionToken.info.data.coin);
-                    accountBoard.Visibility = Visibility.Visible;
+                    tab_account.account_level.Content = string.Format("等级：{0}\r\n硬币：{1}\r\n关注：{2}", SessionToken.info.data.level, SessionToken.info.data.coin, SessionToken.info.data.following);
                 }
-                else
-                    accountBoard.Visibility = Visibility.Hidden;
+                tab_account.IsOpen = !tab_account.IsOpen;
             }
         }
 
-        private void account_logout_Click(object sender, RoutedEventArgs e)
+        public void setLogout()
         {
-            accountBoard.Visibility = Visibility.Hidden;
             Utils.Session.SessionToken.Logined = false;
+            if (System.IO.File.Exists("user.xml"))
+                System.IO.File.Delete("user.xml");
             btn_login.Content = "请登陆";
+
         }
-        public void setDownload(Utils.Net.API.ResInfo info, string path, string name, string desc)
+        public void setDownload(Utils.Net.API.ResInfo info, string path, string name, string desc, string format)
         {
-            ui_dl.createDownload(info.data.durl[0].url, info.referer, path, name, desc);
+            ui_dl.createDownload(info.data.durl[0].url, info.referer, format, path, name, desc);
             tabControl.SelectedItem = tabItem_download;
         }
-        private void closeCheck()
-        {
-            if (ui_dl.dlList.Count > 0)
-            {
-                Msg("等一下", "你还有未完成的下载，是否退出?", close);
-            }
-            else
-                close();
-        }
+        
         private void close()
         {
-            Environment.Exit(0);
+            ui_dl.ClearList();
+            Application.Current.Shutdown();
         }
         public async void Msg(string title, string msg,Action e=null)
         {
@@ -138,6 +148,11 @@ namespace BiliClient
             {
                 await this.ShowMessageAsync(title, msg);
             }
+        }
+
+        private void btn_setting_Click(object sender, RoutedEventArgs e)
+        {
+            tab_setting.IsOpen=!tab_setting.IsOpen;
         }
     }
 }

@@ -16,6 +16,7 @@ namespace BiliClient.Utils.Net.API
             public int quality { get; set; }
             public string format { get; set; }
             public List<int> accept_quality { get; set; }
+            public List<string> accept_description { get; set; }
             public List<Durl> durl { get; set; }
         }
         public class Durl

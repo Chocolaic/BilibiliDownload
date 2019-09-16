@@ -9,14 +9,12 @@ namespace BiliClient.Utils
 {
     class AppData
     {
-        private static string Key { get
-            {
-                return "EXAMPLE VERSION";
-            } }
+        private static readonly byte[] k = null;//移除部分
 
         internal static string getValue(string Str)
         {
-			return "EXAMPLE VERSION";
+            //移除部分
+            return String.Empty;
         }
     }
 }

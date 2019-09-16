@@ -5,11 +5,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace BiliClient.Interact
+namespace BiliClient
 {
     class InteractHandler
     {
-        internal static IControllar UIhandle { get; set; }
+        internal static Interact.IControllar UIhandle { get; set; }
         internal static void URLConvert(string url,ref long avNum)
         {
             string Str = url.Trim().ToLower();

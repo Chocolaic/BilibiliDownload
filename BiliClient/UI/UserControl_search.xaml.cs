@@ -19,13 +19,11 @@ using System.Threading;
 
 namespace BiliClient.UI
 {
-    public delegate void tabHandler(VideoInfo info);
     /// <summary>
     /// UserControl_search.xaml 的交互逻辑
     /// </summary>
     public partial class UserControl_search : UserControl
     {
-        public event tabHandler addTabItem;
         public UserControl_search()
         {
             InitializeComponent();
@@ -34,13 +32,18 @@ namespace BiliClient.UI
         private void button_Click(object sender, RoutedEventArgs e)
         {
             long id = 0;
-            Interact.InteractHandler.URLConvert(textBox_url.Text, ref id);
+            InteractHandler.URLConvert(textBox_url.Text, ref id);
             Dispatcher.Invoke(() =>
             {
                 VideoInfo info = BlblApi.getVideoInfo(id);
-                info.aid = id;
-                if (addTabItem != null)
-                    addTabItem(info);
+                if (info.code == 0)
+                {
+                    info.aid = id;
+                    InteractHandler.UIhandle.createTab(info);
+                }
+                else
+                    InteractHandler.UIhandle.Msg("出...出错了", Utils.Utils.errorMsg(info.code));
+
             });
         }
     }

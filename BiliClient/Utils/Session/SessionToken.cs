@@ -12,5 +12,6 @@ namespace BiliClient.Utils.Session
         internal static AccountInfo info { get; set; }
         internal static bool Logined { get; set; }
         internal static string access { get; set; }
+        internal static string cookies { get; set; }
     }
 }

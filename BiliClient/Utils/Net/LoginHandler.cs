@@ -18,11 +18,10 @@ namespace BiliClient.Utils.Net
 {
     class LoginHandler
     {
-        private Guid fakeid;
         private CookieContainer cookie;
         private string captcha;
 
-        internal LoginInfo getLogin(string username,string pass,string captcha)
+        internal LoginInfo getLogin(string username,string pass,string captcha,ref string jsonData)
         {
             this.captcha = captcha;
             string hash = String.Empty, key = String.Empty;
@@ -36,6 +35,7 @@ namespace BiliClient.Utils.Net
             param.Add("username", username);
             param.Add("password", enc_pw);
             string result = HTTPSRequest("https://passport.bilibili.com/api/v2/oauth2/login", "POST", null, header,ref cookie ,BlblApi.getUrlParam(param), "https://passport.bilibili.com/login");
+            jsonData = result;
             LoginInfo info = JsonConvert.DeserializeObject<LoginInfo>(result);
             return info;
         }
@@ -43,7 +43,7 @@ namespace BiliClient.Utils.Net
         private void getCookie()
         {
             cookie = new CookieContainer();
-            HTTPSRequest("https://passport.bilibili.com/captcha?_=" + Utils.getUnixStamp(), "GET", null, new WebHeaderCollection(), ref cookie, null, "https://passport.bilibili.com/login");
+            HTTPSRequest("https://passport.bilibili.com/captcha?_=" + Utils.getUnixStamp, "GET", null, new WebHeaderCollection(), ref cookie, null, "https://passport.bilibili.com/login");
 
         }
 
@@ -54,7 +54,7 @@ namespace BiliClient.Utils.Net
             {
                 return true;
             });
-            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://passport.bilibili.com/captcha?_="+Utils.getUnixStamp());
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://passport.bilibili.com/captcha?_="+Utils.getUnixStamp);
             req.ProtocolVersion = HttpVersion.Version11;
             
             req.ContentType = "application/x-www-form-urlencoded; charset=utf-8";
@@ -85,11 +85,26 @@ namespace BiliClient.Utils.Net
             captcha.Freeze();
             return captcha;
         }
+        internal string getAccess(Dictionary<string,string> param,ref long mid)
+        {
+            WebHeaderCollection header = new WebHeaderCollection();
+            CookieContainer cookie_tmp = new CookieContainer();
+
+            param.Add("appkey", "buildkey");
+            param.Add("ts", Utils.getUnixStamp.ToString());
+            string result = HTTPSRequest("https://passport.bilibili.com/api/v2/oauth2/info?" + BlblApi.getUrlParam(param), "GET", null, header, ref cookie_tmp);
+            JObject jsonData = JObject.Parse(result);
+            if (int.Parse(jsonData["code"].ToString()) == 0)
+            {
+                mid = long.Parse(jsonData["data"]["mid"].ToString());
+                return jsonData["data"]["access_token"].ToString();
+            }
+            return null;
+        }
 
         private void getKey(ref string hash,ref string key)
         {
             WebHeaderCollection header = new WebHeaderCollection();
-            fakeid = new Guid(MD5.Create().ComputeHash(Encoding.UTF8.GetBytes("d")).Take(16).ToArray());
 
             Dictionary<string, string> param = new Dictionary<string, string>();
             param.Add("appkey", "buildkey");

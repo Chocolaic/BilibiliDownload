@@ -9,8 +9,7 @@
              d:DesignHeight="465" d:DesignWidth="850">
     <Grid Name="grid" Background="#FFE5E5E5" Height="465"  Width="850" Loaded="Grid_Loaded" MouseDown="grid_MouseDown">
         <Button x:Name="button_close" Content="X" HorizontalAlignment="Left" Height="32" Margin="822,0,0,0" VerticalAlignment="Top" Width="32" mah:ControlsHelper.ContentCharacterCasing="Upper" Background="White" Click="button_close_Click" MouseEnter="button_close_MouseEnter" MouseLeave="button_close_MouseLeave"/>
-        <Button x:Name="button_dl" Content="DL Flv" HorizontalAlignment="Left" Height="53" Margin="659,384,0,0" VerticalAlignment="Top" Width="165" Click="button_dl_Click"/>
-        <Button x:Name="button_dl_mp4" Content="DL MP4" HorizontalAlignment="Left" Height="53" Margin="659,307,0,0" VerticalAlignment="Top" Width="165" Click="button2_dl_Click"/>
+        <Button x:Name="button_dl" Content="Download" HorizontalAlignment="Left" Height="53" Margin="659,384,0,0" VerticalAlignment="Top" Width="165" Click="button_dl_Click"/>
         <Label x:Name="label_title" Content="Title" HorizontalAlignment="Left" Height="40" Margin="26,10,0,0" VerticalAlignment="Top" Width="684" FontSize="21.333"/>
         <Label x:Name="label_auth" Content="上传者：" HorizontalAlignment="Left" Height="36" Margin="43,50,0,0" VerticalAlignment="Top" Width="285"/>
         <ScrollViewer Name="sv" Width="320" Margin="43,91,487,111">

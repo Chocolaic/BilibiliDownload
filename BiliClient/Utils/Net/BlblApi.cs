@@ -35,7 +35,7 @@ namespace BiliClient.Utils.Net
             param.Add("aid", aid.ToString());
             param.Add("cid", cid.ToString());
             param.Add("qn", qn.ToString());
-            param.Add("ts", Utils.getUnixStamp().ToString());
+            param.Add("ts", Utils.getUnixStamp.ToString());
             param.Add("otype", "json");
             string url = "https://app.bilibili.com/x/playurl?"+getUrlParam(param);
             string result = HTTPRequest(url, null);
@@ -48,12 +48,25 @@ namespace BiliClient.Utils.Net
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
             param.Add("appkey", "buildkey");
-            param.Add("ts", Utils.getUnixStamp().ToString());
+            param.Add("ts", Utils.getUnixStamp.ToString());
             param.Add("platform", "android");
             param.Add("mobi_app", "android");
             param.Add("build", "5320000");
             string result= HTTPRequest("https://app.biliapi.com/x/v2/account/mine", param);
             AccountInfo info= JsonConvert.DeserializeObject<AccountInfo>(result);
+            return info;
+        }
+        internal static HistoryInfo getHistory(int max = 0)
+        {
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("appkey", "buildkey");
+            param.Add("business", "archive");
+            param.Add("max", max.ToString());
+            param.Add("max_tp", max.ToString());
+            param.Add("ps", "20");
+            param.Add("ts", Utils.getUnixStamp.ToString());
+            string result = HTTPRequest("https://app.bilibili.com/x/v2/history/cursor", param);
+            HistoryInfo info= JsonConvert.DeserializeObject<HistoryInfo>(result);
             return info;
         }
 
@@ -100,6 +113,41 @@ namespace BiliClient.Utils.Net
                 wr.Close();
                 return UnicodeConvent(result);
             }
+        }
+        internal static void DoHTTPDownload(string filePath, string url)
+        {
+            HttpWebRequest req;
+
+            if (url.StartsWith("https", StringComparison.OrdinalIgnoreCase))
+            {
+                ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback((object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors) =>
+                {
+                    return true;
+                });
+                req = WebRequest.Create(url) as HttpWebRequest;
+                req.ProtocolVersion = HttpVersion.Version10;
+            }
+            else
+            {
+                req = WebRequest.Create(url) as HttpWebRequest;
+            }
+            req.Method = "GET";
+            HttpWebResponse wr = (HttpWebResponse)req.GetResponse();
+            Stream stream = wr.GetResponseStream();
+            MemoryStream ms = new MemoryStream();
+            int bufferLen = 4096;
+            byte[] buffer = new byte[bufferLen];
+            int bytesCount = 0;
+            while ((bytesCount = stream.Read(buffer, 0, bufferLen)) > 0)
+            {
+                ms.Write(buffer, 0, bytesCount);
+            }
+            stream.Close();
+            FileStream fs = new FileStream(filePath, FileMode.Create);
+            byte[] fileBytes = ms.ToArray();
+            fs.Write(fileBytes, 0, fileBytes.Length);
+            fs.Close();
+            ms.Close();
         }
 
         internal static string UnicodeConvent(string Str)

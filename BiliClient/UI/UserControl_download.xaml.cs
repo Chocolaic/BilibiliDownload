@@ -1,4 +1,5 @@
-﻿using BiliClient.Utils.Net;
+﻿using BiliClient.Utils;
+using BiliClient.Utils.Net;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -48,7 +49,9 @@ namespace BiliClient.UI
                         }
                         else
                         {
-                            finDownload(dl.dp, dl.lbDL, dl.progress);
+                            dl.lbDL.Content = "正在转换编码，可能需要一定时间";
+                            convertFormat(dl.filename, dl.format);
+                            finDownload(dl.sp, dl.lbDL, dl.progress);
                             dlList.Remove(dl);
                         }
                     }
@@ -60,36 +63,50 @@ namespace BiliClient.UI
         {
             if (dlList.Count > 0)
             {
-                Interact.InteractHandler.UIhandle.Msg("等一下", "你还有没完成的下载，是否关闭下载?", ClearList);
+                InteractHandler.UIhandle.Msg("等一下", "你还有没完成的下载，是否关闭下载?", ClearList);
             }
             else
                 ClearList();
         }
-        private void ClearList()
+        internal void ClearList()
         {
             foreach (DownloadThread dl in dlList)
             {
-                dl.dlThread.Abort();
+                dl.Disponse();
             }
             dlList.Clear();
             panel.Children.Clear();
         }
-        internal void createDownload(string url, string referer, string path, string name, string desc)
+        internal void createDownload(string url, string referer, string format, string path, string name, string desc)
         {
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
             if (!path.EndsWith("\\"))
                 path += "\\";
-            createGroupMember(name, desc).createThread(url, path + name, referer);
+            createGroupMember(name, desc).createThread(url, path + name, referer, format);
         }
-        private void finDownload(DockPanel dp, Label lbDL, ProgressBar progress)
+        private void convertFormat(string filename, string format)
+        {
+            FormatConvert fc = new FormatConvert();
+            switch (format)
+            {
+                case "flv":
+                    File.Move(filename, filename + ".flv");
+                    break;
+                case "mp4":
+                    fc.flvToMp4(filename);
+                    break;
+            }
+        }
+        private void finDownload(StackPanel sp, Label lbDL, ProgressBar progress)
         {
             lbDL.Content = "下载完成";
-            dp.Children.Remove(progress);
+            sp.Children.Remove(progress);
         }
         private DownloadThread createGroupMember(string name, string desc)
         {
             Label lbDL = new Label();
+            StackPanel sp = new StackPanel();
             ProgressBar progress = new ProgressBar();
             DockPanel dp = new DockPanel();
             dp.LastChildFill = false;
@@ -114,17 +131,19 @@ namespace BiliClient.UI
             lbDL.Margin = new Thickness(80, 0, 0, 0);
             lbDL.Content = "0Kb/0Kb";
             //DockPanel.SetDock(lbDL, Dock.Bottom);
-            progress.Width = sv.Width;
+            
             progress.Height = 2;
-            progress.Margin = new Thickness(-300, 0, 0, 0);
-            DockPanel.SetDock(progress, Dock.Bottom);
+            progress.VerticalAlignment = VerticalAlignment.Bottom;
+
             dp.Children.Add(lblName);
             dp.Children.Add(lblResume);
-            dp.Children.Add(progress);
             dp.Children.Add(lbDL);
-            panel.Children.Add(dp);
 
-            DownloadThread dl = new DownloadThread(lbDL, progress, dp);
+            sp.Children.Add(dp);
+            sp.Children.Add(progress);
+            panel.Children.Add(sp);
+
+            DownloadThread dl = new DownloadThread(lbDL, progress, sp);
             dlList.Add(dl);
             return dl;
         }
@@ -133,25 +152,33 @@ namespace BiliClient.UI
         {
             public long totalBytes = 0;
             public long totalDownloadedByte = 0;
+            public string format="flv";
+            public string filename;
             public Thread dlThread;
             public Label lbDL;
+            public StackPanel sp;
             public ProgressBar progress;
-            public DockPanel dp;
-            DownloadHandler handle;
-            public DownloadThread(Label lbDL, ProgressBar progress, DockPanel dp)
+            internal DownloadHandler handle;
+            public DownloadThread(Label lbDL, ProgressBar progress, StackPanel sp)
             {
                 this.lbDL = lbDL;
                 this.progress = progress;
-                this.dp = dp;
-                handle = handle = new DownloadHandler();
+                this.sp = sp;
+                handle = new DownloadHandler();
             }
-            public void createThread(string url, string filename, string referer)
+            public void createThread(string url, string filename, string referer,string format)
             {
+                this.format = format;
+                this.filename = filename;
                 dlThread = new Thread(new ThreadStart(() =>
                 {
                     handle.DownloadFile(url, referer, filename, ref totalBytes, ref totalDownloadedByte);
                 }));
                 dlThread.Start();
+            }
+            public void Disponse()
+            {
+                handle.isWorking = false;
             }
         }
     }

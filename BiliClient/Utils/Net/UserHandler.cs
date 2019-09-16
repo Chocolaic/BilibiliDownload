@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BiliClient.Utils.Net
 {
-    class InteractHandler
+    class UserHandler
     {
         internal static bool sendLike(long aid)
         {
@@ -22,7 +22,7 @@ namespace BiliClient.Utils.Net
                 param.Add("aid", aid.ToString());
                 param.Add("dislike", "0");
                 param.Add("like", "0");
-                param.Add("ts", Utils.getUnixStamp().ToString());
+                param.Add("ts", Utils.getUnixStamp.ToString());
 
                 string result = HTTPSRequest("https://app.biliapi.net/x/v2/view/like",BlblApi.getUrlParam(param),"POST");
                 JObject jsonData = JObject.Parse(result);
@@ -39,7 +39,7 @@ namespace BiliClient.Utils.Net
                 param.Add("aid", aid.ToString());
                 param.Add("mid", mid.ToString());
                 param.Add("multiply", "1");
-                param.Add("ts", Utils.getUnixStamp().ToString());
+                param.Add("ts", Utils.getUnixStamp.ToString());
 
                 string result = HTTPSRequest("https://app.biliapi.com/x/v2/view/coin/add", BlblApi.getUrlParam(param),"POST");
                 JObject jsonData = JObject.Parse(result);
@@ -48,15 +48,15 @@ namespace BiliClient.Utils.Net
             }
             return -1;
         }
-        internal static JArray getFavFolder(long aid,long vmid)
+        internal static JArray getFavFolder(long aid)
         {
             if (Session.SessionToken.Logined)
             {
                 Dictionary<string, string> param = new Dictionary<string, string>();
                 param.Add("appkey", "buildkey");
                 param.Add("aid", aid.ToString());
-                param.Add("vmid", vmid.ToString());
-                param.Add("ts", Utils.getUnixStamp().ToString());
+                param.Add("vmid", Session.SessionToken.info.data.mid.ToString());
+                param.Add("ts", Utils.getUnixStamp.ToString());
 
                 string result = HTTPSRequest("https://api.bilibili.com/x/v2/fav/folder?" + BlblApi.getUrlParam(param),null , "GET");
                 JArray jsonArr=JArray.Parse(JObject.Parse(result)["data"].ToString());
@@ -64,7 +64,24 @@ namespace BiliClient.Utils.Net
             }
             return null;
         }
-        internal static int addFavo(long aid,long fid,ref string msg)
+        internal static API.FavoriteInfo getFavo(long fid)
+        {
+            if (Session.SessionToken.Logined)
+            {
+                Dictionary<string, string> param = new Dictionary<string, string>();
+                param.Add("appkey", "buildkey");
+                param.Add("vmid", Session.SessionToken.info.data.mid.ToString());
+                param.Add("fid", fid.ToString());
+                param.Add("ts", Utils.getUnixStamp.ToString());
+                param.Add("order", "ftime");
+
+                string result = HTTPSRequest("https://app.bilibili.com/x/v2/favorite/video?" + BlblApi.getUrlParam(param), null, "GET");
+                API.FavoriteInfo info = Newtonsoft.Json.JsonConvert.DeserializeObject<API.FavoriteInfo>(result);
+                return info;
+            }
+            return null;
+        }
+        internal static int setFavo(long aid,long fid,string act,ref string msg)
         {
             if (Session.SessionToken.Logined)
             {
@@ -72,11 +89,29 @@ namespace BiliClient.Utils.Net
                 param.Add("appkey", "buildkey");
                 param.Add("aid", aid.ToString());
                 param.Add("fid", fid.ToString());
-                param.Add("ts", Utils.getUnixStamp().ToString());
+                param.Add("ts", Utils.getUnixStamp.ToString());
 
-                string result = HTTPSRequest("https://api.bilibili.com/x/v2/fav/video/add", BlblApi.getUrlParam(param), "POST");
+                string result = HTTPSRequest("https://api.bilibili.com/x/v2/fav/video/"+act, BlblApi.getUrlParam(param), "POST");
                 JObject jsonData = JObject.Parse(result);
                 msg = jsonData["message"].ToString();
+                return int.Parse(jsonData["code"].ToString());
+            }
+            return -1;
+        }
+        internal static int setHistory(long aid,long cid)
+        {
+            if (Session.SessionToken.Logined)
+            {
+                Dictionary<string, string> param = new Dictionary<string, string>();
+                param.Add("appkey", "buildkey");
+                param.Add("aid", aid.ToString());
+                param.Add("cid", cid.ToString());
+                param.Add("epid", "0");
+                param.Add("realtime", "4");
+                param.Add("type", "3");
+
+                string result = HTTPSRequest("https://api.bilibili.com/x/v2/history/report", BlblApi.getUrlParam(param), "POST");
+                JObject jsonData = JObject.Parse(result);
                 return int.Parse(jsonData["code"].ToString());
             }
             return -1;

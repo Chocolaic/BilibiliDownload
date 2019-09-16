@@ -1,4 +1,5 @@
-﻿using BiliClient.Utils.Net.API;
+﻿using BiliClient.Utils.Net;
+using BiliClient.Utils.Net.API;
 using MahApps.Metro.Controls;
 using System;
 using System.Collections.Generic;
@@ -24,14 +25,19 @@ namespace BiliClient.UI
     public partial class Window_dl : MetroWindow
     {
         VideoInfo info;
-        public Window_dl(VideoInfo info)
+        private int quality { get; set; } = 32;
+        private string Format { get; set; }
+        private Dictionary<string, int> accept_qn = new Dictionary<string, int>();
+        public Window_dl(VideoInfo info,string format="flv")
         {
             InitializeComponent();
             this.info = info;
+            this.Format = format;
         }
         private void button_dl_Click(object sender, RoutedEventArgs e)
         {
-            Interact.InteractHandler.UIhandle.setDownload(Utils.Net.BlblApi.getResInfo(info.aid,info.cid), textBox_fn.Text, info.title,info.description);
+            InteractHandler.UIhandle.setDownload(BlblApi.getResInfo(info.aid,info.cid,accept_qn[select_quality.SelectedItem.ToString()]), textBox_fn.Text, info.title,info.description, select_format.SelectedItem.ToString());
+            BlblApi.DoHTTPDownload(textBox_fn.Text + "\\pic.jpg", info.pic);
             this.Close();
         }
         private void button_view_Click(object sender, RoutedEventArgs e)
@@ -49,6 +55,18 @@ namespace BiliClient.UI
 
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            this.Dispatcher.BeginInvoke(new Action(delegate
+            {
+                var _init=Utils.Net.BlblApi.getResInfo(info.aid, info.cid);
+                for(int i = 0; i < _init.data.accept_quality.Count; i++)
+                {
+                    select_quality.Items.Add(_init.data.accept_description[i]);
+                    accept_qn.Add(_init.data.accept_description[i], _init.data.accept_quality[i]);
+                }
+                button_dl.IsEnabled = true;
+            }));
+            select_format.Items.Add("flv");
+            select_format.Items.Add("mp4");
             textBox_fn.Text = Environment.CurrentDirectory + "\\Download\\" + info.aid;
             System.Timers.Timer timer = new System.Timers.Timer(); timer.Interval = 500;
             timer.Elapsed += delegate
@@ -56,6 +74,7 @@ namespace BiliClient.UI
                 Dispatcher.BeginInvoke(new Action(delegate
                 {
                     string filepath = (textBox_fn.Text.EndsWith("\\")) ? textBox_fn.Text + info.aid : textBox_fn.Text + "\\" + info.title;
+                    filepath += "."+Format;
                     if (File.Exists(filepath))
                         label_file.Content = "文件已存在，将会替换原有文件.";
                     else

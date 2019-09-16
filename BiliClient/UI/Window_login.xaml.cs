@@ -2,6 +2,7 @@
 using BiliClient.Utils.Session;
 using MahApps.Metro.Controls;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,13 +19,11 @@ using System.Windows.Shapes;
 
 namespace BiliClient.UI
 {
-    public delegate void LoginHander(Utils.Net.API.AccountInfo info);
     /// <summary>
     /// Window_login.xaml 的交互逻辑
     /// </summary>
     public partial class Window_login : MetroWindow
     {
-        public event LoginHander setLogin;
         LoginHandler handle;
         public Window_login()
         {
@@ -38,7 +37,7 @@ namespace BiliClient.UI
             {
                 ImageSource = new BitmapImage(ResData.banner_login)
             };
-            ReloadCaptcha();        
+            ReloadCaptcha();
         }
 
         private void btn_login_Click(object sender, RoutedEventArgs e)
@@ -55,38 +54,36 @@ namespace BiliClient.UI
             }
             else
             {
-                Utils.Net.API.LoginInfo info =handle.getLogin(textBox_username.Text, textBox_password.Text, textBox_captcha.Text);
+                string jsonData = String.Empty;
+                Utils.Net.API.LoginInfo info = handle.getLogin(textBox_username.Text, textBox_password.Text, textBox_captcha.Text, ref jsonData);
                 if (info.code != 0)
                 {
                     switch (info.code)
                     {
                         case -105:
                             label_captcha.Content = "验证码不对";
-                            return;
+                            break;
                         case -629:
                             label_passwd.Content = "账号或者密码错误";
-                            return;
+                            break;
                     }
                 }
                 else
                 {
                     SessionToken.Logined = true;
                     SessionToken.access = info.data.token_info.access_token;
-                    if (setLogin != null)
-                    {
-                        SessionToken.info = BlblApi.getUserInfo();
-                        setLogin(SessionToken.info);
-                        this.Close();
-                    }
-                    
+                    SessionToken.cookies = JObject.Parse(jsonData)["data"]["cookie_info"].ToString();
+                    SessionCache.SaveAccount();
+                    SessionToken.info = BlblApi.getUserInfo();
+                    InteractHandler.UIhandle.setLogin(SessionToken.info);
+                    this.Close();
                 }
             }
-
         }
 
         private async void ReloadCaptcha()
         {
-            await Dispatcher.BeginInvoke(new Action(delegate
+            await img_captcha.Dispatcher.BeginInvoke(new Action(delegate
             {
                 img_captcha.BeginInit();
                 img_captcha.Source = handle.getCaptcha();

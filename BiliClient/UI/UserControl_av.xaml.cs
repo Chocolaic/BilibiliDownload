@@ -39,7 +39,11 @@ namespace BiliClient.UI
         private void button_close_Click(object sender, RoutedEventArgs e)
         {
             if (rmTabItem != null)
+            {
+                if (Reader.HistoryRecord)
+                    UserHandler.setHistory(info.aid, info.cid);
                 rmTabItem();
+            }
         }
         private void Grid_Loaded(object sender, RoutedEventArgs e)
         {
@@ -61,11 +65,11 @@ namespace BiliClient.UI
         }
         private void button_dl_Click(object sender, RoutedEventArgs e)
         {
-            setDownload();
+            setDownload("flv");
         }
         private void button2_dl_Click(object sender, RoutedEventArgs e)
         {
-            setDownload();
+            setDownload("mp4");
         }
         private void button_close_MouseEnter(object sender, MouseEventArgs e)
         {
@@ -90,9 +94,9 @@ namespace BiliClient.UI
                 hide_control();
             }
         }
-        private void setDownload()
+        private void setDownload(string format)
         { 
-            Window_dl dl = new Window_dl(info);
+            Window_dl dl = new Window_dl(info,format);
             dl.Show();
         }
         private void hide_control()
@@ -102,7 +106,6 @@ namespace BiliClient.UI
                 label_title.Visibility = Visibility.Hidden;
                 label_auth.Visibility = Visibility.Hidden;
                 button_dl.Visibility = Visibility.Hidden;
-                button_dl_mp4.Visibility = Visibility.Hidden;
                 sv.Visibility = Visibility.Hidden;
                 fav_folder.Visibility = Visibility.Hidden;
             }
@@ -111,7 +114,6 @@ namespace BiliClient.UI
                 label_title.Visibility = Visibility.Visible;
                 label_auth.Visibility = Visibility.Visible;
                 button_dl.Visibility = Visibility.Visible;
-                button_dl_mp4.Visibility = Visibility.Visible;
                 sv.Visibility = Visibility.Visible;
             }
         }
@@ -120,11 +122,11 @@ namespace BiliClient.UI
         {
             if (!Utils.Session.SessionToken.Logined)
             {
-                Interact.InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
+                InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
                 return;
             }
 
-            if (!Liked && InteractHandler.sendLike(info.aid))
+            if (!Liked && UserHandler.sendLike(info.aid))
             {
                 act_like.Source = new BitmapImage(ResData.ico_like);
                 Liked = true;
@@ -135,15 +137,15 @@ namespace BiliClient.UI
         {
             if (!Utils.Session.SessionToken.Logined)
             {
-                Interact.InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
+                InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
                 return;
             }
 
             if (Coins<2)
             {
                 string msg = String.Empty;
-                if (InteractHandler.sendCoins(info.aid, info.mid, ref msg) != 0)
-                    Interact.InteractHandler.UIhandle.Msg("不对哦", msg);
+                if (UserHandler.sendCoins(info.aid, info.mid, ref msg) != 0)
+                    InteractHandler.UIhandle.Msg("不对哦", msg);
                 else
                 {
                     act_coin.Source = new BitmapImage(ResData.ico_coin);
@@ -157,12 +159,12 @@ namespace BiliClient.UI
         {
             if (!Utils.Session.SessionToken.Logined)
             {
-                Interact.InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
+                InteractHandler.UIhandle.Msg("请登陆", "如果您已经登陆，请登出后重试");
                 return;
             }
-            if (fav_folder.Visibility == Visibility.Hidden && !Favorited)
+            if (fav_folder.Visibility == Visibility.Hidden)
             {
-                Newtonsoft.Json.Linq.JArray jsonArr = InteractHandler.getFavFolder(info.aid, Utils.Session.SessionToken.info.data.mid);
+                Newtonsoft.Json.Linq.JArray jsonArr = UserHandler.getFavFolder(info.aid);
                 fav_panel.Children.Clear();
                 for (int i = 0; i < jsonArr.Count; i++)
                 {
@@ -197,13 +199,27 @@ namespace BiliClient.UI
         {
             DockPanel dp = (DockPanel)sender;
             string msg = String.Empty;
-            if(InteractHandler.addFavo(info.aid, long.Parse(dp.Name.Substring(1)),ref msg)!=0)
-                Interact.InteractHandler.UIhandle.Msg("不对哦", msg);
+            if (!Favorited)
+            {
+                if (UserHandler.setFavo(info.aid, long.Parse(dp.Name.Substring(1)), "add", ref msg) != 0)
+                    InteractHandler.UIhandle.Msg("不对哦", msg);
+                else
+                {
+                    act_favo.Source = new BitmapImage(ResData.ico_favo);
+                    fav_folder.Visibility = Visibility.Hidden;
+                    Favorited = true;
+                }
+            }
             else
             {
-                act_favo.Source = new BitmapImage(ResData.ico_favo);
-                fav_folder.Visibility = Visibility.Hidden;
-                Favorited = true;
+                if (UserHandler.setFavo(info.aid, long.Parse(dp.Name.Substring(1)), "del", ref msg) != 0)
+                    InteractHandler.UIhandle.Msg("不对哦", msg);
+                else
+                {
+                    act_favo.Source = new BitmapImage(ResData.ico_ufavo);
+                    fav_folder.Visibility = Visibility.Hidden;
+                    Favorited = false;
+                }
             }
         }
     }
