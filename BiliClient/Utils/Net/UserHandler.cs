@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -13,7 +13,7 @@ namespace BiliClient.Utils.Net
 {
     class UserHandler
     {
-        internal static bool sendLike(long aid)
+        internal static void sendLike(long aid, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -24,13 +24,12 @@ namespace BiliClient.Utils.Net
                 param.Add("like", "0");
                 param.Add("ts", Utils.getUnixStamp.ToString());
 
-                string result = HTTPSRequest("https://app.biliapi.net/x/v2/view/like",BlblApi.getUrlParam(param),"POST");
-                JObject jsonData = JObject.Parse(result);
-                return (int.Parse(jsonData["code"].ToString()) == 0);
+                HTTPSRequest<JObject>("https://app.biliapi.net/x/v2/view/like", "POST", param, null, call);
+                return;
             }
-            return false;
+            call(false, "unlogin");
         }
-        internal static int sendCoins(long aid,long mid,ref string msg)
+        internal static void sendCoins(long aid, long mid, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -41,14 +40,12 @@ namespace BiliClient.Utils.Net
                 param.Add("multiply", "1");
                 param.Add("ts", Utils.getUnixStamp.ToString());
 
-                string result = HTTPSRequest("https://app.biliapi.com/x/v2/view/coin/add", BlblApi.getUrlParam(param),"POST");
-                JObject jsonData = JObject.Parse(result);
-                msg = jsonData["message"].ToString();
-                return int.Parse(jsonData["code"].ToString());
+                HTTPSRequest<JObject>("https://app.biliapi.com/x/v2/view/coin/add", "POST", param, null, call);
+                return;
             }
-            return -1;
+            call(false, "unlogin");
         }
-        internal static JArray getFavFolder(long aid)
+        internal static void getFavFolder(long aid, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -58,13 +55,20 @@ namespace BiliClient.Utils.Net
                 param.Add("vmid", Session.SessionToken.info.data.mid.ToString());
                 param.Add("ts", Utils.getUnixStamp.ToString());
 
-                string result = HTTPSRequest("https://api.bilibili.com/x/v2/fav/folder?" + BlblApi.getUrlParam(param),null , "GET");
-                JArray jsonArr=JArray.Parse(JObject.Parse(result)["data"].ToString());
-                return jsonArr;
+                HTTPSRequest<JObject>("https://api.bilibili.com/x/v2/fav/folder", "GET", param, null,
+                    (bool isSuccess, object data) =>
+                    {
+                        if (isSuccess)
+                        {
+                            JArray jsonArr = JArray.Parse(((JObject)data)["data"].ToString());
+                            call(true, jsonArr);
+                        }
+                    });
+                return;
             }
-            return null;
+            call(false, "unlogin");
         }
-        internal static API.FavoriteInfo getFavo(long fid)
+        internal static void getFavo(long fid, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -75,13 +79,12 @@ namespace BiliClient.Utils.Net
                 param.Add("ts", Utils.getUnixStamp.ToString());
                 param.Add("order", "ftime");
 
-                string result = HTTPSRequest("https://app.bilibili.com/x/v2/favorite/video?" + BlblApi.getUrlParam(param), null, "GET");
-                API.FavoriteInfo info = Newtonsoft.Json.JsonConvert.DeserializeObject<API.FavoriteInfo>(result);
-                return info;
+                HTTPSRequest<API.FavoriteInfo>("https://app.bilibili.com/x/v2/favorite/video", "GET", param, null, call);
+                return;
             }
-            return null;
+            call(false, "unlogin");
         }
-        internal static int setFavo(long aid,long fid,string act,ref string msg)
+        internal static void setFavo(long aid, long fid, string act, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -91,14 +94,12 @@ namespace BiliClient.Utils.Net
                 param.Add("fid", fid.ToString());
                 param.Add("ts", Utils.getUnixStamp.ToString());
 
-                string result = HTTPSRequest("https://api.bilibili.com/x/v2/fav/video/"+act, BlblApi.getUrlParam(param), "POST");
-                JObject jsonData = JObject.Parse(result);
-                msg = jsonData["message"].ToString();
-                return int.Parse(jsonData["code"].ToString());
+                HTTPSRequest<JObject>("https://api.bilibili.com/x/v2/fav/video/" + act, "POST", param, null, call);
+                return;
             }
-            return -1;
+            call(false, "unlogin");
         }
-        internal static int setHistory(long aid,long cid)
+        internal static void setHistory(long aid, long cid, HttpCallBack call)
         {
             if (Session.SessionToken.Logined)
             {
@@ -110,14 +111,19 @@ namespace BiliClient.Utils.Net
                 param.Add("realtime", "4");
                 param.Add("type", "3");
 
-                string result = HTTPSRequest("https://api.bilibili.com/x/v2/history/report", BlblApi.getUrlParam(param), "POST");
-                JObject jsonData = JObject.Parse(result);
-                return int.Parse(jsonData["code"].ToString());
+                HTTPSRequest<JObject>("https://api.bilibili.com/x/v2/history/report", "POST", param, null, call);
+                return;
             }
-            return -1;
+            call(false, "unlogin");
         }
-        private static string HTTPSRequest(string url,string data,string type)
+        private static async void HTTPSRequest<T>(string url, string type, Dictionary<string, string> param, string referer = null, HttpCallBack call = null)
         {
+            string paramStr = String.Empty;
+            if (param != null)
+            {
+                paramStr = BlblApi.getUrlParam(param);
+                url = url.EndsWith("?") ? url + BlblApi.getUrlParam(param) : url + "?" + paramStr;
+            }
             HttpWebRequest req;
             if (url.StartsWith("https", StringComparison.OrdinalIgnoreCase))
             {
@@ -132,24 +138,45 @@ namespace BiliClient.Utils.Net
             {
                 req = (HttpWebRequest)WebRequest.Create(url);
             }
+            req.ServicePoint.Expect100Continue = false;
             req.Method = type;
             req.ContentType = "application/x-www-form-urlencoded; charset=utf-8";
             req.UserAgent = "Mozilla/5.0 BiliDroid/5.32.0 (bbcallen@gmail.com)";
-            if (type == "POST")
+            if (referer != null)
+                req.Referer = referer;
+
+            await Task.Run(() =>
             {
-                byte[] postData = Encoding.UTF8.GetBytes(data);
-                req.ContentLength = data.Length;
-                Stream writer = req.GetRequestStream();
-                writer.Write(postData, 0, postData.Length);
-                writer.Close();
-            }
-            HttpWebResponse wr = (HttpWebResponse)req.GetResponse();
-            using (StreamReader stream = new StreamReader(wr.GetResponseStream()))
-            {
-                string result = stream.ReadToEnd();
-                wr.Close();
-                return BlblApi.UnicodeConvent(result);
-            }
+                try
+                {
+                    if (type == "POST")
+                    {
+                        byte[] postData = Encoding.UTF8.GetBytes(paramStr);
+                        req.ContentLength = postData.Length;
+                        Stream writer = req.GetRequestStream();
+                        writer.Write(postData, 0, postData.Length);
+                        writer.Close();
+                    }
+                    HttpWebResponse wr = (HttpWebResponse)req.GetResponse();
+                    using (StreamReader stream = new StreamReader(wr.GetResponseStream()))
+                    {
+                        string result = BlblApi.UnicodeConvent(stream.ReadToEnd());
+                        wr.Close();
+
+                        Type t = typeof(T);
+                        if (t.Name == "String")
+                            call(true, result);
+                        else if (t.Name == "JObject")
+                            call(true, JObject.Parse(result));
+                        else
+                            call(true, JsonConvert.DeserializeObject<T>(result));
+                    }
+                }
+                catch (Exception e)
+                {
+                    call(false, e.Message);
+                }
+            });
         }
     }
 }

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BiliClient.Utils.Net
 {
@@ -20,7 +15,7 @@ namespace BiliClient.Utils.Net
         /// <param name="filename"></param>
         /// <param name="totalBytes"></param>
         /// <param name="totalDownloadedByte"></param>
-        internal void DownloadFile(string url,string referer,string filename, ref long totalBytes, ref long totalDownloadedByte)
+        internal void DownloadFile(string url, string referer, string filename, ref long totalBytes, ref long totalDownloadedByte)
         {
             isWorking = true;
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);

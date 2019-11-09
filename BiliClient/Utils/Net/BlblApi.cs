@@ -1,5 +1,6 @@
 ﻿using BiliClient.Utils.Net.API;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,20 +16,25 @@ using System.Web;
 
 namespace BiliClient.Utils.Net
 {
+    internal delegate void HttpCallBack(bool isSuccess, object data);
     class BlblApi
     {
-        internal static VideoInfo getVideoInfo(long id)
+        internal static void getVideoInfo(long id, HttpCallBack call)
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("appkey", "appkey");
-            param.Add("id", id.ToString());
-            param.Add("type", "json");
-            string result= HTTPRequest("https://api.bilibili.com/view", param);
-            VideoInfo info= JsonConvert.DeserializeObject<VideoInfo>(result);
-            return info;
+
+            param.Add("appkey", "buildkey");
+            param.Add("aid", id.ToString());
+
+
+            param.Add("build", "0");
+            param.Add("mobi_app", "android");
+            param.Add("autoplay", "1");
+            param.Add("ts", Utils.getUnixStamp.ToString());
+            HTTPRequest<VideoInfo>("https://app.bilibili.com/x/v2/view", param, call);
         }
 
-        internal static ResInfo getResInfo(long aid,long cid,int qn=32)
+        internal static void getResInfo(long aid, long cid, int qn, HttpCallBack call)
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
             param.Add("appkey", "appkey");
@@ -37,14 +43,44 @@ namespace BiliClient.Utils.Net
             param.Add("qn", qn.ToString());
             param.Add("ts", Utils.getUnixStamp.ToString());
             param.Add("otype", "json");
-            string url = "https://app.bilibili.com/x/playurl?"+getUrlParam(param);
-            string result = HTTPRequest(url, null);
-            ResInfo info= JsonConvert.DeserializeObject<ResInfo>(result);
-            info.aid = aid;
-            info.referer = url;
-            return info;
+            string url = "https://app.bilibili.com/playurl?" + getUrlParam(param);
+            HTTPRequest<_ResInfo>(url, null,
+                (bool isSuccess, object data) =>
+                {
+                    if (isSuccess)
+                    {
+                        _ResInfo info = (_ResInfo)data;
+                        info.referer = url;
+                        call(true, info);
+                    }
+                    else
+                        call(isSuccess, data);
+                });
         }
-        internal static AccountInfo getUserInfo()
+        internal static void getBangumiInfo(long aid, long cid, int qn, HttpCallBack call)
+        {
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("appkey", "appkey");
+            param.Add("aid", aid.ToString());
+            param.Add("cid", cid.ToString());
+            param.Add("qn", qn.ToString());
+            param.Add("ts", Utils.getUnixStamp.ToString());
+            param.Add("otype", "json");
+            string url = "https://bangumi.bilibili.com/player/api/v2/playurl?" + getUrlParam(param);
+            HTTPRequest<BangumiInfo>(url, null,
+                (bool isSuccess, object data) =>
+                {
+                    if (isSuccess)
+                    {
+                        BangumiInfo info = (BangumiInfo)data;
+                        info.referer = url;
+                        call(true, info);
+                    }
+                    else
+                        call(isSuccess, data);
+                });
+        }
+        internal static void getAccountInfo(HttpCallBack call)
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
             param.Add("appkey", "buildkey");
@@ -52,11 +88,20 @@ namespace BiliClient.Utils.Net
             param.Add("platform", "android");
             param.Add("mobi_app", "android");
             param.Add("build", "5320000");
-            string result= HTTPRequest("https://app.biliapi.com/x/v2/account/mine", param);
-            AccountInfo info= JsonConvert.DeserializeObject<AccountInfo>(result);
-            return info;
+            HTTPRequest<AccountInfo>("https://app.biliapi.com/x/v2/account/mine", param, call);
         }
-        internal static HistoryInfo getHistory(int max = 0)
+        internal static void getSeasonInfo(string epid, HttpCallBack call)
+        {
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("appkey", "buildkey");
+            param.Add("build", "5320000");
+            param.Add("ep_id", epid);
+            param.Add("mobi_app", "android");
+            param.Add("platform", "android");
+            param.Add("track_path", "0");
+            HTTPRequest<SeasonInfo>("https://api.bilibili.com/pgc/view/app/season", param, call);
+        }
+        internal static void getHistory(int max, HttpCallBack call)
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
             param.Add("appkey", "buildkey");
@@ -65,33 +110,31 @@ namespace BiliClient.Utils.Net
             param.Add("max_tp", max.ToString());
             param.Add("ps", "20");
             param.Add("ts", Utils.getUnixStamp.ToString());
-            string result = HTTPRequest("https://app.bilibili.com/x/v2/history/cursor", param);
-            HistoryInfo info= JsonConvert.DeserializeObject<HistoryInfo>(result);
-            return info;
+            HTTPRequest<HistoryInfo>("https://app.bilibili.com/x/v2/history/cursor", param, call);
         }
 
-        internal static string getUrlParam(Dictionary<string,string> param)
+        internal static string getUrlParam(Dictionary<string, string> param)
         {
             if (Session.SessionToken.Logined)
                 param.Add("access_key", Session.SessionToken.access);
             var dicSort = from objDic in param orderby objDic.Key select objDic;
             string data = String.Empty;
-            string[] deKey = AppData.getValue(Resource.ResourceManager.GetString(param["appkey"])).Split('&');param["appkey"] = deKey[0];
+            string[] deKey = AppData.getValue(Resource.ResourceManager.GetString(param["appkey"])).Split('&'); param["appkey"] = deKey[0];
             foreach (KeyValuePair<string, string> kvp in dicSort)
             {
-                data += kvp.Key + "=" + urlEncode(kvp.Value)+"&";
+                data += kvp.Key + "=" + urlEncode(kvp.Value) + "&";
             }
-            MD5 md5=new MD5CryptoServiceProvider();
-            byte[] md5Data=md5.ComputeHash(Encoding.UTF8.GetBytes(data.TrimEnd('&') + deKey[1]));
-            return data+"sign="+BitConverter.ToString(md5Data).Replace("-","").ToLower();
+            MD5 md5 = new MD5CryptoServiceProvider();
+            byte[] md5Data = md5.ComputeHash(Encoding.UTF8.GetBytes(data.TrimEnd('&') + deKey[1]));
+            return data + "sign=" + BitConverter.ToString(md5Data).Replace("-", "").ToLower();
         }
 
-        private static string HTTPRequest(string url, Dictionary<string, string> param=null)
+        private async static void HTTPRequest<T>(string url, Dictionary<string, string> param, HttpCallBack call)
         {
-            if(param!=null)
+            if (param != null)
                 url = url.EndsWith("?") ? url + getUrlParam(param) : url + "?" + getUrlParam(param);
             HttpWebRequest req;
-
+            Console.WriteLine($"Request from {url}");
             if (url.StartsWith("https", StringComparison.OrdinalIgnoreCase))
             {
                 ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback((object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors) =>
@@ -106,13 +149,30 @@ namespace BiliClient.Utils.Net
                 req = WebRequest.Create(url) as HttpWebRequest;
             }
             req.Method = "GET";
-            HttpWebResponse wr= (HttpWebResponse)req.GetResponse();
-            using (StreamReader stream = new StreamReader(wr.GetResponseStream()))
+            await Task.Run(() =>
             {
-                string result=stream.ReadToEnd();
-                wr.Close();
-                return UnicodeConvent(result);
-            }
+                try
+                {
+                    HttpWebResponse wr = (HttpWebResponse)req.GetResponse();
+                    using (StreamReader stream = new StreamReader(wr.GetResponseStream()))
+                    {
+                        string result = UnicodeConvent(stream.ReadToEnd());
+                        wr.Close();
+
+                        Type t = typeof(T);
+                        if (t.Name == "String")
+                            call(true, result);
+                        else if (t.Name == "JObject")
+                            call(true, JObject.Parse(result));
+                        else
+                            call(true, JsonConvert.DeserializeObject<T>(result));
+                    }
+                }
+                catch (Exception e)
+                {
+                    call(false, e.Message);
+                }
+            });
         }
         internal static void DoHTTPDownload(string filePath, string url)
         {
@@ -166,7 +226,7 @@ namespace BiliClient.Utils.Net
                     builder.Append(HttpUtility.UrlEncode(c.ToString()).ToUpper());
                 }
                 else
-                    builder.Append(c);               
+                    builder.Append(c);
             }
             return builder.ToString();
         }

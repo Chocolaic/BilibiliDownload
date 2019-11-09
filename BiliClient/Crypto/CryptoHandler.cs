@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace BiliClient.Crypto
 {
@@ -30,7 +26,8 @@ namespace BiliClient.Crypto
             var idx = 0;
 
             //读取长度
-            Func<byte, int> readLen = (first) => {
+            Func<byte, int> readLen = (first) =>
+            {
                 if (data[idx] == first)
                 {
                     idx++;
@@ -50,9 +47,10 @@ namespace BiliClient.Crypto
                     }
                 }
                 throw new Exception("PEM未能提取到数据");
-            };          
+            };
             //读取块数据
-            Func<byte[]> readBlock = () => {
+            Func<byte[]> readBlock = () =>
+            {
                 var len = readLen(0x02);
                 if (data[idx] == 0x00)
                 {
@@ -64,7 +62,8 @@ namespace BiliClient.Crypto
                 return val;
             };
             //比较data从idx位置开始是否是byts内容
-            Func<byte[], bool> eq = (byts) => {
+            Func<byte[], bool> eq = (byts) =>
+            {
                 for (var i = 0; i < byts.Length; i++, idx++)
                 {
                     if (idx >= data.Length)
